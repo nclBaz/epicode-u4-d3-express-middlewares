@@ -16,6 +16,7 @@ import { dirname, join } from "path"
 import fs from "fs"
 import uniqid from "uniqid"
 import createHttpError from "http-errors"
+import { checkBookSchema, checkValidationResult } from "./validation.js"
 
 const booksRouter = express.Router()
 
@@ -24,7 +25,7 @@ const booksJSONPath = join(dirname(fileURLToPath(import.meta.url)), "books.json"
 const getBooks = () => JSON.parse(fs.readFileSync(booksJSONPath))
 const writeBooks = booksArray => fs.writeFileSync(booksJSONPath, JSON.stringify(booksArray))
 
-booksRouter.post("/", (req, res, next) => {
+booksRouter.post("/", checkBookSchema, checkValidationResult, (req, res, next) => {
   try {
     const newBook = { ...req.body, createdAt: new Date(), id: uniqid() }
     const books = getBooks()
@@ -42,7 +43,7 @@ booksRouter.post("/", (req, res, next) => {
 booksRouter.get("/", (req, res, next) => {
   try {
     const books = getBooks()
-    throw new Error("KABOOOOOOOOOOOOOOOOOOOOOOOOOOOM!")
+    //throw new Error("KABOOOOOOOOOOOOOOOOOOOOOOOOOOOM!")
     if (req.query && req.query.category) {
       const filteredBooks = books.filter(book => book.category === req.query.category)
       res.send(filteredBooks)
