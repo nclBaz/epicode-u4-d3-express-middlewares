@@ -34,6 +34,11 @@ const usersJSONPath = join(dirname(fileURLToPath(import.meta.url)), "users.json"
 
 // ****************************************************************************************
 
+const anotherMiddleware = (req, res, next) => {
+  console.log("HEY I AM ANOTHER MIDDLEWARE!")
+  next()
+}
+
 // 1. CREATE --> POST http://localhost:3001/users/ (+body)
 usersRouter.post("/", (req, res) => {
   // 1. Read the request body to obtain new user's data
@@ -59,7 +64,8 @@ usersRouter.post("/", (req, res) => {
 })
 
 // 2. READ --> GET http://localhost:3001/users/
-usersRouter.get("/", (req, res) => {
+usersRouter.get("/", anotherMiddleware, (req, res) => {
+  // ROUTE LEVEL MIDDLEWARE
   // 1. Read the content of users.json file
   const fileContent = fs.readFileSync(usersJSONPath) // Here you obtain a BUFFER object, which is MACHINE READABLE ONLY
   // 2. Obtain an array from that file

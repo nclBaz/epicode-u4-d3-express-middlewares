@@ -15,6 +15,7 @@ import { fileURLToPath } from "url"
 import { dirname, join } from "path"
 import fs from "fs"
 import uniqid from "uniqid"
+import createHttpError from "http-errors"
 
 const booksRouter = express.Router()
 
@@ -23,59 +24,87 @@ const booksJSONPath = join(dirname(fileURLToPath(import.meta.url)), "books.json"
 const getBooks = () => JSON.parse(fs.readFileSync(booksJSONPath))
 const writeBooks = booksArray => fs.writeFileSync(booksJSONPath, JSON.stringify(booksArray))
 
-booksRouter.post("/", (req, res) => {
-  const newBook = { ...req.body, createdAt: new Date(), id: uniqid() }
-  const books = getBooks()
+booksRouter.post("/", (req, res, next) => {
+  try {
+    const newBook = { ...req.body, createdAt: new Date(), id: uniqid() }
+    const books = getBooks()
 
-  books.push(newBook)
+    books.push(newBook)
 
-  writeBooks(books)
+    writeBooks(books)
 
-  res.status(201).send({ id: newBook.id })
-})
-
-booksRouter.get("/", (req, res) => {
-  console.log("QUERY: ", req.query)
-  const books = getBooks()
-  if (req.query && req.query.category) {
-    const filteredBooks = books.filter(book => book.category === req.query.category)
-    res.send(filteredBooks)
-  } else {
-    res.send(books)
+    res.status(201).send({ id: newBook.id })
+  } catch (error) {
+    next(error)
   }
 })
 
-booksRouter.get("/:bookId", (req, res) => {
-  const books = getBooks()
-
-  const foundBook = books.find(book => book.id === req.params.bookId)
-  res.send(foundBook)
+booksRouter.get("/", (req, res, next) => {
+  try {
+    const books = getBooks()
+    throw new Error("KABOOOOOOOOOOOOOOOOOOOOOOOOOOOM!")
+    if (req.query && req.query.category) {
+      const filteredBooks = books.filter(book => book.category === req.query.category)
+      res.send(filteredBooks)
+    } else {
+      res.send(books)
+    }
+  } catch (error) {
+    next(error) // this is going to "jump" to the error handlers
+  }
 })
 
-booksRouter.put("/:bookId", (req, res) => {
-  const books = getBooks()
+booksRouter.get("/:bookId", (req, res, next) => {
+  try {
+    const books = getBooks()
 
-  const index = books.findIndex(book => book.id === req.params.bookId)
-
-  const oldBook = books[index]
-
-  const updatedBook = { ...oldBook, ...req.body, updatedAt: new Date() }
-
-  books[index] = updatedBook
-
-  writeBooks(books)
-
-  res.send(updatedBook)
+    const foundBook = books.find(book => book.id === req.params.bookId)
+    if (foundBook) {
+      res.send(foundBook)
+    } else {
+      next(createHttpError(404, `Book with id ${req.params.bookId} not found!`)) // this is creating not a normal error, but an error with a STATUS CODE (in this case 404)
+    }
+  } catch (error) {
+    next(error)
+  }
 })
 
-booksRouter.delete("/:bookId", (req, res) => {
-  const books = getBooks()
+booksRouter.put("/:bookId", (req, res, next) => {
+  try {
+    const books = getBooks()
 
-  const remainingBooks = books.filter(book => book.id !== req.params.bookId)
+    const index = books.findIndex(book => book.id === req.params.bookId)
+    if (index !== -1) {
+      const oldBook = books[index]
 
-  writeBooks(remainingBooks)
+      const updatedBook = { ...oldBook, ...req.body, updatedAt: new Date() }
 
-  res.status(204).send()
+      books[index] = updatedBook
+
+      writeBooks(books)
+
+      res.send(updatedBook)
+    } else {
+      next(createHttpError(404, `Book with id ${req.params.bookId} not found!`))
+      // res.status(404).send()
+    }
+  } catch (error) {
+    next(error)
+  }
+})
+
+booksRouter.delete("/:bookId", (req, res, next) => {
+  try {
+    const books = getBooks()
+
+    const remainingBooks = books.filter(book => book.id !== req.params.bookId)
+
+    writeBooks(remainingBooks)
+
+    res.status(204).send()
+  } catch (error) {
+    next(error)
+  }
 })
 
 export default booksRouter
